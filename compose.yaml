@@ -1,0 +1,20 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16.3-alpine
+    container_name: db
+    environment:
+      POSTGRES_DB: birthdays
+      POSTGRES_PASSWORD: test
+      POSTGRES_USER: test
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    volumes:
+      - dbdata:/var/lib/postgresql/data/pgdata
+      - ./db/migrations/000001_create_tables.up.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - '1111:5432'
+
+volumes:
+  dbdata:
+
+
