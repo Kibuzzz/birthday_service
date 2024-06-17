@@ -18,13 +18,11 @@ migrate -database "postgres://test:test@localhost:1111/birthdays?sslmode=disable
 go run main.go
 ```
 Теперь сервер должен быть доступен по адресу http://localhost:1234.
-
-Регистрация:
-```bash
+### Регистрация
 URL: /register
 Метод: POST
 Описание: Регистрация нового пользователя.
-
+```bash
 curl -X POST http://localhost:1234/register \
 -H "Content-Type: application/json" \
 -d '{
@@ -34,12 +32,11 @@ curl -X POST http://localhost:1234/register \
   "birthday": "01.01.1990"
 }'
 ```
-Авторизация:
-```bash
+### Авторизация
 URL: /login
 Метод: POST
 Описание: Вход в систему.
-
+```bash
 curl -X POST http://localhost:1234/login \
 -H "Content-Type: application/json" \
 -d '{
@@ -47,31 +44,28 @@ curl -X POST http://localhost:1234/login \
   "password": "password"
 }'
 ```
-Выход:
-```bash
+### Выход
 URL: /logout
 Метод: POST
 Описание: Выход из системы.
-
+```bash
 curl -X POST http://localhost:1234/logout
 ```
 
 ### Эти эндпоинты требуют авторизации. Не забудьте добавить заголовок Authorization с JWT-токеном
 Получить всех сотрудников:
-```bash
 URL: /api/employees
 Метод: GET
 Описание: Получение списка всех сотрудников.
-
+```bash
 curl -X GET http://localhost:1234/api/employees \
 --cookie "token=<your-jwt-token>"
 ```
-Удалить сотрудника:
-```bash
+### Удалить сотрудника
 URL: /api/employees
 Метод: DELETE
 Описание: Удаление сотрудника по email.
-
+```bash
 curl -X DELETE http://localhost:1234/api/employees \
 --cookie "token=<your-jwt-token>" \
 -H "Content-Type: application/json" \
@@ -79,21 +73,19 @@ curl -X DELETE http://localhost:1234/api/employees \
   "email": "john.doe@example.com"
 }'
 ```
-Получить все подписки пользователя:
-``` bash
+### Получить все подписки пользователя
 URL: /api/subs
 Метод: GET
 Описание: Получение всех подписок текущего пользователя.
-
+```bash
 curl -X GET http://localhost:1234/api/subs \
 --cookie "token=<your-jwt-token>"
 ```
-Создать подписку:
-```bash
+### Создать подписку
 URL: /api/subs
 Метод: POST
 Описание: Создание новой подписки.
-
+```bash
 curl -X POST http://localhost:1234/api/subs \
 --cookie "token=<your-jwt-token>" \
 -H "Content-Type: application/json" \
@@ -102,12 +94,11 @@ curl -X POST http://localhost:1234/api/subs \
   "time": "12:00"
 }'
 ```
-Удалить подписку:
-```bash
+### Удалить подписку
 URL: /api/subs
 Метод: DELETE
 Описание: Удаление подписки.
-
+```bash
 curl -X DELETE http://localhost:1234/api/subs \
 --cookie "token=<your-jwt-token>" \
 -H "Content-Type: application/json" \
