@@ -27,7 +27,7 @@ func (c *Cron) checkBirthday() error {
 			if err := c.Notificator.Notify(sub); err != nil {
 				return err
 			}
-			err = c.Subs.UpdateSub(sub.SubscriberID, sub.BirthdayPersonID)
+			err = c.Subs.AddYear(sub.SubscriberID, sub.BirthdayPersonID)
 			if err != nil {
 				return err
 			}

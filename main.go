@@ -7,6 +7,8 @@ import (
 	"birtday_service/repository/postgres"
 	"birtday_service/server"
 	"log"
+
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -20,12 +22,14 @@ func main() {
 	subStore := postgres.NewPostgresSubs(db)
 	notificator := notification.New(userStore)
 	scheduler := cron.New(subStore, notificator)
+	logger, _ := zap.NewProduction()
+	sugar := logger.Sugar()
 
 	go func() {
 		scheduler.Start()
 	}()
 
-	server := server.New(userStore, subStore, scheduler)
+	server := server.New(userStore, subStore, scheduler, sugar)
 	server.InitRoutes()
 	log.Fatal(server.Start())
 }

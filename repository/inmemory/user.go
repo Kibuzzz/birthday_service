@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+var _ user.UserStorage = (*UserStorage)(nil)
+
 type UserStorage struct {
 	sync.Mutex
 

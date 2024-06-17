@@ -1,37 +1,32 @@
 package inmemory
 
 import (
-	subscription "birtday_service/models/subscription"
+	model "birtday_service/models/subscription"
 	"sync"
 	"time"
 )
 
+var _ model.SubStorage = (*SubStore)(nil)
+
 type SubStore struct {
 	sync.Mutex
-	Subs map[int]map[int]subscription.Subscription
+	Subs map[int]map[int]model.Subscription
 }
 
 func NewSubStore() *SubStore {
 	return &SubStore{
-		Subs: make(map[int]map[int]subscription.Subscription),
+		Subs: make(map[int]map[int]model.Subscription),
 	}
 }
 
-func (ss *SubStore) Sub(subsID int, celebratorID int, birthday time.Time, notifTime time.Time) error {
+func (ss *SubStore) Sub(subsID int, celebratorID int, notifTime time.Time) error {
 	ss.Lock()
 	defer ss.Unlock()
 
-	hours := time.Duration(notifTime.Hour())
-	minutes := time.Duration(notifTime.Minute())
-
-	thisYearBirthday := time.Date(time.Now().Year(), birthday.Month(), birthday.Day(), birthday.Hour(), birthday.Minute(), 0, 0, subscription.Location)
-	notificationTime := thisYearBirthday.Add(-time.Hour * hours)
-	notificationTime = notificationTime.Add(-time.Minute * minutes)
-
-	sub := subscription.Subscription{SubscriberID: subsID, BirthdayPersonID: celebratorID, NotificationTime: notificationTime}
+	sub := model.Subscription{SubscriberID: subsID, BirthdayPersonID: celebratorID, NotificationTime: notifTime}
 	_, ok := ss.Subs[subsID][celebratorID]
 	if !ok {
-		ss.Subs[subsID] = make(map[int]subscription.Subscription)
+		ss.Subs[subsID] = make(map[int]model.Subscription)
 	}
 	ss.Subs[subsID][celebratorID] = sub
 	return nil
@@ -44,22 +39,22 @@ func (ss *SubStore) UnSub(subsID int, celebratorID int) error {
 	return nil
 }
 
-func (ss *SubStore) GetSubsByID(subsID int) ([]subscription.Subscription, error) {
+func (ss *SubStore) GetSubsByID(subsID int) ([]model.Subscription, error) {
 	ss.Lock()
 	defer ss.Unlock()
 	subs, ok := ss.Subs[subsID]
 	if !ok {
-		return []subscription.Subscription{}, subscription.ErrorEmpty
+		return []model.Subscription{}, model.ErrorNoRows
 	}
-	allSubs := []subscription.Subscription{}
+	allSubs := []model.Subscription{}
 	for _, sub := range subs {
 		allSubs = append(allSubs, sub)
 	}
 	return allSubs, nil
 }
 
-func (ss *SubStore) List() ([]subscription.Subscription, error) {
-	list := []subscription.Subscription{}
+func (ss *SubStore) List() ([]model.Subscription, error) {
+	list := []model.Subscription{}
 	for _, subs := range ss.Subs {
 		for _, sub := range subs {
 			list = append(list, sub)
@@ -68,10 +63,34 @@ func (ss *SubStore) List() ([]subscription.Subscription, error) {
 	return list, nil
 }
 
-func (ss *SubStore) UpdateSub(subID int, celebratorID int) error {
+func (ss *SubStore) GetSub(subsID, celebratorID int) (model.Subscription, error) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	sub, ok := ss.Subs[subsID][celebratorID]
+	if !ok {
+		return model.Subscription{}, model.ErrorNoRows
+	}
+	return sub, nil
+}
+
+func (ss *SubStore) UpdateSub(subsID int, celebratorID int, notifTime time.Time) error {
+	ss.Lock()
+	defer ss.Unlock()
+
+	sub, ok := ss.Subs[subsID][celebratorID]
+	if !ok {
+		return model.ErrorNoRows
+	}
+	sub.NotificationTime = notifTime
+	ss.Subs[subsID][celebratorID] = sub
+	return nil
+}
+
+func (ss *SubStore) AddYear(subID int, celebratorID int) error {
 	sub, ok := ss.Subs[subID][celebratorID]
 	if !ok {
-		return subscription.ErrorNotFound
+		return model.ErrorNoRows
 	}
 	sub.NotificationTime = sub.NotificationTime.AddDate(1, 0, 0)
 	ss.Subs[subID][celebratorID] = sub

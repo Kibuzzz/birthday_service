@@ -2,6 +2,7 @@ package postgres
 
 import (
 	model "birtday_service/models/user"
+	"database/sql"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -14,6 +15,8 @@ type User struct {
 	Password string    `db:"password" json:"password"`
 	Birthday time.Time `db:"birthday" json:"birthday"`
 }
+
+var _ model.UserStorage = (*PostgresUsers)(nil)
 
 type PostgresUsers struct {
 	db *sqlx.DB
@@ -33,12 +36,11 @@ func (pu *PostgresUsers) GetByEmail(email string) (model.User, error) {
 	var user User
 	query := `SELECT id, name, email, password, birthday FROM users WHERE email = $1`
 	err := pu.db.Get(&user, query, email)
+	if err == sql.ErrNoRows {
+		return model.User{}, model.ErrorNotFound
+	}
 	if err != nil {
 		return model.User{}, err
-	}
-	emptyUser := User{}
-	if user == emptyUser {
-		return model.User{}, model.ErrorNotFound
 	}
 	return convertToModel(user), nil
 }
@@ -47,12 +49,11 @@ func (pu *PostgresUsers) GetByID(id int) (model.User, error) {
 	var user User
 	query := `SELECT id, name, email, password, birthday FROM users WHERE id = $1`
 	err := pu.db.Get(&user, query, id)
+	if err == sql.ErrNoRows {
+		return model.User{}, model.ErrorNotFound
+	}
 	if err != nil {
 		return model.User{}, err
-	}
-	emptyUser := User{}
-	if user == emptyUser {
-		return model.User{}, model.ErrorNotFound
 	}
 	return convertToModel(user), nil
 }
@@ -61,6 +62,9 @@ func (pu *PostgresUsers) GetAll() ([]model.User, error) {
 	var users []User
 	query := `SELECT id, name, email, password, birthday FROM users`
 	err := pu.db.Select(&users, query)
+	if len(users) == 0 {
+		return nil, model.ErrorNotFound
+	}
 	return convertToModels(users), err
 }
 

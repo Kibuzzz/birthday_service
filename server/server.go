@@ -6,6 +6,7 @@ import (
 	user "birtday_service/models/user"
 
 	"github.com/gofiber/fiber/v2"
+	"go.uber.org/zap"
 )
 
 type Server struct {
@@ -13,11 +14,12 @@ type Server struct {
 	SubsStorage subs.SubStorage
 	Scheduler   cron.Cron
 	App         *fiber.App
+	Logger      *zap.SugaredLogger
 }
 
-func New(users user.UserStorage, subs subs.SubStorage, schehuler cron.Cron) Server {
+func New(users user.UserStorage, subs subs.SubStorage, schehuler cron.Cron, logger *zap.SugaredLogger) Server {
 	app := fiber.New()
-	return Server{UserStorage: users, SubsStorage: subs, Scheduler: schehuler, App: app}
+	return Server{UserStorage: users, SubsStorage: subs, Scheduler: schehuler, App: app, Logger: logger}
 }
 
 func (s *Server) InitRoutes() {
@@ -26,7 +28,7 @@ func (s *Server) InitRoutes() {
 	// employees
 	api.Use(s.AuthMiddleware)
 	api.Get("/employees", s.AllEmployees)
-	api.Delete("/employees/:email", s.DeleteEmployee)
+	api.Delete("/employees", s.DeleteEmployee)
 	// subs
 	api.Get("/subs", s.SubsByID)       // все подписки пользователя
 	api.Post("/subs", s.Subscribe)     // создание подписки

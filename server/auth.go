@@ -15,7 +15,9 @@ var (
 	birthdayFormat = "02.01.2006"
 )
 
-func (h *Server) Register(c *fiber.Ctx) error {
+func (s *Server) Register(c *fiber.Ctx) error {
+
+	s.Logger.Info("registrer handler")
 
 	type RegisterRequest struct {
 		Name     string `json:"name"`
@@ -27,33 +29,40 @@ func (h *Server) Register(c *fiber.Ctx) error {
 	var register RegisterRequest
 	err := c.BodyParser(&register)
 	if err != nil {
+		s.Logger.Infow("bad request", "request", register, "error", err)
 		return fmt.Errorf("bad user: %w", err)
 	}
 
-	user, err := h.UserStorage.GetByEmail(register.Email)
+	_, err = s.UserStorage.GetByEmail(register.Email)
 	userNotFound := errors.Is(err, usr.ErrorNotFound)
 	switch {
 	case err != nil && !userNotFound:
+		s.Logger.Errorw("internal error", "error", err)
 		return c.SendStatus(fiber.StatusInternalServerError)
-	case user != usr.User{}:
+	case !userNotFound:
+		s.Logger.Infow("duplicat user", "user email", register.Email)
 		return c.JSON(fmt.Sprintf("user with email %s exists", register.Email))
 	}
 
 	birthdayDate, err := time.Parse(birthdayFormat, register.Birthday)
 	if err != nil {
+		s.Logger.Infow("bad time formatting", "time", register.Birthday)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "bad birthday. wanted day.month.year"})
 	}
 
-	err = h.UserStorage.AddEmp(register.Name, register.Email, register.Password, birthdayDate)
+	err = s.UserStorage.AddEmp(register.Name, register.Email, register.Password, birthdayDate)
 	if err != nil {
-		return c.JSON(fmt.Sprintf("faile to add user: %v", err))
+		s.Logger.Errorw("failed to add employee", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": "failed to registrate"})
 	}
 	return c.SendStatus(http.StatusOK)
 }
 
 var jwtSecret = []byte("jwtSecret")
 
-func (h *Server) Login(c *fiber.Ctx) error {
+func (s *Server) Login(c *fiber.Ctx) error {
+
+	s.Logger.Info("login handler")
 
 	type LoginRequest struct {
 		Email    string `json:"email"`
@@ -62,25 +71,26 @@ func (h *Server) Login(c *fiber.Ctx) error {
 
 	var login LoginRequest
 	if err := c.BodyParser(&login); err != nil {
+		s.Logger.Infow("bad request", "request", login)
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
 	email := login.Email
 	pass := login.Password
-	user, err := h.UserStorage.GetByEmail(email)
+	user, err := s.UserStorage.GetByEmail(email)
 	userNotFound := errors.Is(err, usr.ErrorNotFound)
 	switch {
 	case err != nil && !userNotFound:
+		s.Logger.Errorw("internal error", "request", login, "error", err)
 		return c.SendStatus(fiber.StatusInternalServerError)
 	case userNotFound:
+		s.Logger.Infow("no such user", "request", login)
 		return c.JSON(fiber.Map{"message": "user not found"})
 	}
 
 	if pass != user.Password {
-		fmt.Println(login)
-		fmt.Println(email, pass)
-		fmt.Println(user.Email, user.Password)
-		return c.JSON(fiber.Map{"message": "wrong password"})
+		s.Logger.Debugw("wrong password", "password", pass)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "wrong password"})
 	}
 
 	token := jwt.New(jwt.SigningMethodHS256)
@@ -92,6 +102,7 @@ func (h *Server) Login(c *fiber.Ctx) error {
 
 	signedToken, err := token.SignedString(jwtSecret)
 	if err != nil {
+		s.Logger.Errorw("failed to sign token", "error", err)
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
@@ -105,7 +116,10 @@ func (h *Server) Login(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Success login", "token": signedToken})
 }
 
-func (h *Server) Logout(c *fiber.Ctx) error {
+func (s *Server) Logout(c *fiber.Ctx) error {
+
+	s.Logger.Info("logout handler")
+
 	cookie := new(fiber.Cookie)
 	cookie.Name = "token"
 	cookie.Value = ""
@@ -116,7 +130,7 @@ func (h *Server) Logout(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Successfully logged out"})
 }
 
-func (h *Server) AuthMiddleware(c *fiber.Ctx) error {
+func (s *Server) AuthMiddleware(c *fiber.Ctx) error {
 	cookie := c.Cookies("token")
 	if cookie == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"message": "Missing or invalid JWT"})

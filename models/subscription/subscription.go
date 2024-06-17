@@ -22,14 +22,15 @@ type Subscription struct {
 }
 
 type SubStorage interface {
-	Sub(subsID int, celebratorID int, birthday time.Time, notifTime time.Time) error
-	UnSub(subsID int, celebratorID int) error
+	Sub(subscriberID int, celebratorID int, notifTime time.Time) error
+	UnSub(subscriberID int, celebratorID int) error
 	GetSubsByID(id int) ([]Subscription, error)
+	GetSub(subscriberID, celebratorID int) (Subscription, error)
 	List() ([]Subscription, error)
-	UpdateSub(subID int, celebratorID int) error
+	AddYear(subscriberID int, celebratorID int) error
+	UpdateSub(subscriberID int, celebratorID int, notificationTime time.Time) error
 }
 
 var (
-	ErrorEmpty    = errors.New("empty subscriptions")
-	ErrorNotFound = errors.New("subscriptions not found")
+	ErrorNoRows = errors.New("subscriptions not found")
 )
